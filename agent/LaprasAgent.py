@@ -13,13 +13,34 @@ class LaprasAgent(mqtt.Client):
         self.timer_list = [] # List for timer callack threads 
         self.in_loop = False # flag to terminate timer callback when loop is stop
         self.broker_address = ('smart-iot.kaist.ac.kr', 18830)
+        self.connect()
 
     ''' Publisher for Lapras (Decided Placename & Publisher) '''
-    def publish(self, type, name, msg):
+    def publish(self, type, name, msg, qos=2):
         ''' type: [context, functionality, action, task] '''
         topic = f'{self.place_name}/{type}/{name}' 
         json_msg = json.dumps(msg)
-        return super().publish(topic, payload=json_msg, qos=2, retain=False, properties=None)
+        return super().publish(topic, payload=json_msg, qos=qos, retain=False, properties=None)
+
+    def publish_func(self, name, arguments=[], qos=2):
+        msg = {
+            'type': 'functionality',
+            'name': name,
+            'arguments': arguments,
+            'publisher': self.agent_name,
+            'timestamp': self.curr_timestamp()
+        }
+        return self.publish('functionality', name, msg, qos=qos)
+    
+    def publish_context(self, name, value, qos=2):
+        msg = {
+            'type': 'context',
+            'name': name,
+            'value': value,
+            'publisher': self.agent_name,
+            'timestamp': self.curr_timestamp()
+        }
+        return self.publish('context', name, msg, qos=qos)
 
     # def publish(self, topic, payload=None, qos=0, retain=False, properties=None): # original one
     #     return super().publish(topic, payload=payload, qos=qos, retain=retain, properties=properties)
