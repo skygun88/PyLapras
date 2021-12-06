@@ -32,8 +32,8 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
 
         
         self.create_timer(self.timer_callback, timer_period=1)
-        self.subscribe('N1Lounge8F/context/RobotStatus', 2) # RobotControlAgent Alive
-        self.subscribe('N1Lounge8F/context/InferenceManagerStatus', 2) # InferenceManaer Alive
+        self.subscribe('N1Lounge8F/context/robotStatus', 2) # RobotControlAgent Alive
+        self.subscribe('N1Lounge8F/context/inferenceManagerStatus', 2) # InferenceManaer Alive
         self.subscribe('N1Lounge8F/context/robotComplete', 2) # Move (p0, elevator), Observe
         self.subscribe('N1Lounge8F/context/detectedHuman', 2) # Detection Result
     
@@ -122,14 +122,14 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
 
         value = dict.get('value')
         
-        if name == 'RobotStatus':
+        if name == 'robotStatus':
             ''' RobotStatus Alive update '''
             if value == True:
                 self.control_alive = True
                 self.control_last_alive = timestamp
             return
         
-        elif name == 'InferenceManagerStatus':
+        elif name == 'inferenceManagerStatus':
             ''' RobotStatus Alive update '''
             if value == True:
                 self.inference_alive = True
