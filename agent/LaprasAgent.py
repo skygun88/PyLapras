@@ -4,6 +4,7 @@ import json
 import time
 
 
+
 class LaprasAgent(mqtt.Client):
     def __init__(self, agent_name='LaprasAgent', place_name='N1CDSNLab823'):
         super().__init__()
@@ -26,16 +27,29 @@ class LaprasAgent(mqtt.Client):
         msg = {
             'type': 'functionality',
             'name': name,
-            'arguments': arguments,
             'publisher': self.agent_name,
             'timestamp': self.curr_timestamp()
         }
+        if len(arguments) > 0:
+            msg['arguments'] = arguments
         return self.publish('functionality', name, msg, qos=qos)
     
+    def publish_action(self, name, arguments=[], qos=2):
+        msg = {
+            'type': 'action',
+            'name': name,
+            'publisher': self.agent_name,
+            'timestamp': self.curr_timestamp()
+        }
+        if len(arguments) > 0:
+            msg['arguments'] = arguments
+        return self.publish('action', name, msg, qos=qos)
+
     def publish_context(self, name, value, qos=2):
         msg = {
             'type': 'context',
             'name': name,
+            'valueType': java_type(value),
             'value': value,
             'publisher': self.agent_name,
             'timestamp': self.curr_timestamp()
@@ -59,10 +73,12 @@ class LaprasAgent(mqtt.Client):
         print(str(rc))
 
     def on_publish(self, client, userdata, mid):
-        print("In on_pub callback mid= ", mid)
+        # print("In on_pub callback mid= ", mid)
+        return
 
     def on_subscribe(self, client, userdata, mid, granted_qos):
-        print("subscribed: " + str(mid) + " " + str(granted_qos))
+        # print("subscribed: " + str(mid) + " " + str(granted_qos))
+        return
 
     def on_message(self, client, userdata, msg):
         dict_string = str(msg.payload.decode("utf-8"))
@@ -98,4 +114,9 @@ class LaprasAgent(mqtt.Client):
 
     def curr_timestamp(self): # return KST Timestamp (msec)
         curr_nano = time.time()
-        return curr_nano//1000
+        return int(curr_nano*1000)
+
+
+def java_type(data):
+    str_type_map = {'<class \'int\'>': 'java.lang.Integer', '<class \'str\'>': 'java.lang.String', '<class \'float\'>': 'java.lang.Double', '<class \'bool\'>': 'java.lang.Boolean'}
+    return str_type_map[str(type(data))]
