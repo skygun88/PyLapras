@@ -1,11 +1,12 @@
 import os 
 import sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import json
 import time
 import datetime
-import LaprasAgent
+from agent import LaprasAgent
 
-# sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+
 
 ''' 0: Initializing, 1: Ready, 12: Patrolling, 13: Observing, 14: Inferring, 15: Actuating, 16: Returning, 17: Docking, 18: Undocking '''
 INITIALIZING, READY, PATROLLING, OBSERVING, INFERRING, ACTUATING, RETURNING, DOCKING, UNDOCKING = 0, 1, 12, 13, 14, 15, 16, 17, 18
@@ -23,7 +24,7 @@ STATE_MAP = {0: 'INITIALIZING', 1: 'READY', 12: 'PATROLLING', 13: 'OBSERVING', 1
         schedules - The list of scheduled time to start patrol ex. [{start: (22, 0), end: (23, 0)}]
 '''
 class PatrolAgent(LaprasAgent.LaprasAgent):
-    def __init__(self, agent_name='PatrolAgent', place_name='N1Lounge8F', timeout_thres=20, schedules=[]):
+    def __init__(self, agent_name='PatrolAgent', place_name='N1Lounge8F', timeout_thres=30, schedules=[]):
         super().__init__(agent_name=agent_name, place_name=place_name)
         ''' Agent States '''
         self.status = INITIALIZING
@@ -36,16 +37,17 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
         self.curr_light = -1
         
         self.create_timer(self.timer_callback, timer_period=1)
-        self.subscribe('N1Lounge8F/context/Brightness', 2) # Lounge Brightenss (temp)
         self.subscribe('N1Lounge8F/context/robotStatus', 2) # RobotControlAgent Alive
         self.subscribe('N1Lounge8F/context/inferenceManagerStatus', 2) # InferenceManaer Alive
         self.subscribe('N1Lounge8F/context/robotComplete', 2) # Move (p0, elevator), Observe
         self.subscribe('N1Lounge8F/context/detectedhumans', 2) # Detection Result
         self.subscribe('N1Lounge8F/context/LightGroup1', 2)
-    
+        self.publish_context('PatrolAgentStatus', STATE_MAP[self.status], 2)
+
     def transition(self, next_state):
         print(f'[{self.agent_name}/{self.place_name}] State transition: {STATE_MAP[self.status]}->{STATE_MAP[next_state]}')          
         self.status = next_state
+        self.publish_context('PatrolAgentStatus', STATE_MAP[self.status], 2)
 
     def timer_callback(self):
         self.check_alive() # check inference manager and robot agent is alive
@@ -93,10 +95,6 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
 
         elif self.status == INFERRING:
             print('Waiting for inference manager to detect people')
-
-            ''' Temp code '''
-            self.transition(next_state=ACTUATING)
-            self.turnOffAllDevices()
 
             return
 
@@ -159,9 +157,6 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
                 self.inference_alive = True
                 self.inference_last_alive = timestamp
             return
-        
-        elif name == 'Brightness':
-                self.lounge_brightness = value
         
         elif name == 'robotComplete':
             print(f'[{self.agent_name}/{self.place_name}] {publisher} - {name}: {value}')
@@ -229,8 +224,9 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
         curr_ts = self.curr_timestamp()
         # if curr_ts - self.inference_last_alive > self.timeout_thres*1000:
         #     self.inference_alive == False
+        print(curr_ts, self.control_last_alive, self.timeout_thres*1000, curr_ts - self.control_last_alive > self.timeout_thres*1000, self.control_alive)
         if curr_ts - self.control_last_alive > self.timeout_thres*1000:
-            self.control_alive == False
+            self.control_alive = False
             
     def turnOffAllDevices(self):
         # name_list = ["TurnOffAllLights", "TurnOffFan", "StopAircon0", "StopAircon1", "StopAircon0", "StopAircon1"]
@@ -242,12 +238,17 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
     
 
 if __name__ == '__main__':
-    schedules = [
-        {
-            'start': (1, 00),
-            'end': (23, 00),
-        }
-    ]
-    client = PatrolAgent(agent_name='PatrolAgent', place_name='N1Lounge8F', schedules=schedules)
+    os.chdir(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+    with open('resources/N1Lounge8F/patrolagent.json', 'r') as f:
+        configs = json.loads(f.read())
+        f.close()
+    
+    agent_name = configs['agent_name'] 
+    place_name = configs['place_name'] 
+    arguments = configs['arguments'] 
+    schedules = arguments['schedules']
+
+    # print(agent_name, place_name, arguments)
+    client = PatrolAgent(agent_name=agent_name, place_name=place_name, schedules=schedules)
     client.loop_forever()
     client.disconnect()

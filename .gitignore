@@ -1,3 +1,4 @@
 *.code-workspace
 *.pyc
 *.jpg
+db_info.json
