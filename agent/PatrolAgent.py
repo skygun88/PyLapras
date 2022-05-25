@@ -37,17 +37,17 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
         self.curr_light = -1
         
         self.create_timer(self.timer_callback, timer_period=1)
-        self.subscribe('N1Lounge8F/context/robotStatus', 2) # RobotControlAgent Alive
-        self.subscribe('N1Lounge8F/context/inferenceManagerStatus', 2) # InferenceManaer Alive
-        self.subscribe('N1Lounge8F/context/robotComplete', 2) # Move (p0, elevator), Observe
-        self.subscribe('N1Lounge8F/context/detectedhumans', 2) # Detection Result
-        self.subscribe('N1Lounge8F/context/LightGroup1', 2)
+        self.subscribe(f'{place_name}/context/RobotControlAgentOperatingStatus', 2) # RobotControlAgent Alive
+        self.subscribe(f'{place_name}/context/inferenceManagerStatus', 2) # InferenceManaer Alive
+        self.subscribe(f'{place_name}/context/robotComplete', 2) # Move (p0, elevator), Observe
+        self.subscribe(f'{place_name}/context/detectedhumans', 2) # Detection Result
+        self.subscribe(f'{place_name}/context/LightGroup1', 2)
         self.publish_context('PatrolAgentStatus', STATE_MAP[self.status], 2)
 
     def transition(self, next_state):
         print(f'[{self.agent_name}/{self.place_name}] State transition: {STATE_MAP[self.status]}->{STATE_MAP[next_state]}')          
         self.status = next_state
-        self.publish_context('PatrolAgentStatus', STATE_MAP[self.status], 2)
+        self.publish_context(f'{self.agent_name}Status', STATE_MAP[self.status], 2)
 
     def timer_callback(self):
         self.check_alive() # check inference manager and robot agent is alive
@@ -116,6 +116,7 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
             print('Fobbiden line')
             raise('Why code is in here')
 
+        # self.publish_context('PatrolAgentOperatingStatus', True, 2)
         return
 
     def check_schedule(self):
@@ -144,7 +145,7 @@ class PatrolAgent(LaprasAgent.LaprasAgent):
         value = dict.get('value')
         # print(f'[{name}: {value}] Message is arrived from {publisher}')
 
-        if name == 'robotStatus':
+        if name == 'RobotControlAgentOperatingStatus':
             ''' RobotStatus Alive update '''
             if value == True:
                 self.control_alive = True

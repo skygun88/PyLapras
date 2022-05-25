@@ -1,4 +1,5 @@
 *.code-workspace
 *.pyc
 *.jpg
+*.mp4
 db_info.json

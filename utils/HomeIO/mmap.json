@@ -1,0 +1,43 @@
+{
+    "A": {
+        "Thermostat": {
+            "temperature": 2
+        },
+        "Heater": {
+            "intensity": 1,
+            "power": 9,
+            "energy": 141
+        }, 
+        "Temperature": 150
+    }, 
+    "D": {
+        "Thermostat": {
+            "temperature": 13
+        },
+        "Heater": {
+            "intensity": 34,
+            "power": 44,
+            "energy": 1500
+        }, 
+        "Temperature": 153
+    }, 
+    "E": {
+        "Thermostat": {
+            "temperature": 25
+        },
+        "Heater": {
+            "intensity": 45,
+            "power": 57,
+            "energy": 1750
+        }, 
+        "Temperature": 154 
+    },
+    "Common": {
+        "Humidity": 133,
+        "DewTemperature": 136,
+        "Windspeed": 137,
+        "Datetime": 65
+        
+    }
+    
+}

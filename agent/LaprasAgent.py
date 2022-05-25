@@ -83,7 +83,8 @@ class LaprasAgent(mqtt.Client):
     def on_message(self, client, userdata, msg):
         dict_string = str(msg.payload.decode("utf-8"))
         dict = json.loads(dict_string)
-        print(f'Arrived message: {dict}')
+        # print(f'Arrived message: {dict}')
+        return dict
 
 
     ''' About Timer callack '''
@@ -94,8 +95,8 @@ class LaprasAgent(mqtt.Client):
 
     def callback_timer(self, func, timer_period):
         while self.in_loop:
-            time.sleep(timer_period)
             func()
+            time.sleep(timer_period)
     
     ''' About Loop start (+Timer callback start) '''
     def loop_forever(self, timeout=1, max_packets=1, retry_first_connection=False):
