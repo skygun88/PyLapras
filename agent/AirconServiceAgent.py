@@ -9,7 +9,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
 from agent import LaprasAgent
 from utils.state import StateCollector
 from utils.db import upload_replay, db_parser, preprocessing

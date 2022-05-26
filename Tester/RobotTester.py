@@ -143,6 +143,7 @@ class QRobotTester(QRobotTesterUI):
         self.startRecordAct.setDisabled(True)
         self.endRecordAct.setDisabled(True)
         self.cameraLabel.setPixmap(self.whiteMap)
+        self.fpsLabel.setText('0.00')
         for button in self.buttons:
             button.setDisabled(True)
         return 

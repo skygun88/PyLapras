@@ -7,7 +7,7 @@ import random
 import base64
 import datetime
 import numpy as np
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
 from agent import LaprasAgent
 
 class VideoCollectAgent(LaprasAgent.LaprasAgent):

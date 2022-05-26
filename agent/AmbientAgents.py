@@ -3,7 +3,9 @@ import sys
 import json
 import time
 import datetime
-import LaprasAgent
+
+sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
+from agent import LaprasAgent
 
 # sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 

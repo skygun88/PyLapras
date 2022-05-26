@@ -25,7 +25,8 @@ class RobotTestAgent(LaprasAgent):
         self.subscribe(f'{place_name}/context/robotComplete')
         
         ''' For Preventing circuit import '''
-        from PyLapras.Tester.Tester import QRobotTester
+        # sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
+        from Tester.RobotTester import QRobotTester
         self.gui: QRobotTester = gui
         self.video_dir = os.path.join(TESTER_PATH, 'video')
         self.out_fname = 'out.mp4'
@@ -99,7 +100,7 @@ class RobotTestAgent(LaprasAgent):
             
     def check_connected(self):
         now = int(time.time()*1000)
-        connected = self.robot_x > 0 and self.robot_y > 0 and now - self.last_alive < 1000*30 
+        connected = self.robot_x > 0 and self.robot_y > 0 and now - self.last_alive < 1000*15 
         return connected
     
     def start_record(self):

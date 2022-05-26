@@ -1,11 +1,11 @@
 import os
 import sys
+import time
 import qimage2ndarray
 from PyQt5.QtCore import Qt, QEvent, QPoint, pyqtSignal, QObject
-from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter, QPen, QFont
-from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
+from PyQt5.QtGui import QPixmap, QPalette, QPainter, QPen, QFont
 from PyQt5.QtWidgets import QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QAction, \
-    qApp, QWidget, QGridLayout, QLineEdit, QPushButton, QApplication
+    QWidget, QGridLayout, QLineEdit, QPushButton, QApplication
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -38,6 +38,7 @@ class QRobotTesterUI(QMainWindow):
         self.last_time_move_x, self.last_time_move_y = 0, 0
         self.target_x_map, self.target_y_map = -1, -1
         self.robot_x_map, self.robot_y_map = -1, -1
+        self.last_camera_ts = -1
         self.drag = False
         self.setMouseTracking(True)
 
@@ -141,9 +142,9 @@ class QRobotTesterUI(QMainWindow):
         self.c.cameraReceive.connect(self.update_camera)
 
         self.fpsLabel = QLabel('0.00', self)
-        self.fpsLabel.resize(40, 20)
+        self.fpsLabel.resize(80, 20)
         self.fpsLabel.setStyleSheet("background-color: rgba(0,0,0,0%); color: black")
-        self.fpsLabel.setAlignment(Qt.AlignRight)
+        self.fpsLabel.setAlignment(Qt.AlignLeft)
         self.fpsLabel.setVisible(False)
 
 
@@ -208,6 +209,12 @@ class QRobotTesterUI(QMainWindow):
         qImg = qimage2ndarray.array2qimage(img)
         self.cameraLabel.setPixmap(QPixmap.fromImage(qImg))
         self.cameraLabel.update()
+
+        if self.last_camera_ts > 0:
+            fps = 1/(time.time()-self.last_camera_ts)
+            self.fpsLabel.setText(f'FPS: {fps:.2f}')
+
+        self.last_camera_ts = time.time()
 
     def pose_on_image(self, x, y):
         x_map = (x-self.imageLabel.frameGeometry().x()-self.scrollArea.frameGeometry().x()-self.widget.frameGeometry().x())/(self.scaleFactor*self.mag_scale)
@@ -302,8 +309,8 @@ class QRobotTesterUI(QMainWindow):
         
         ''' Camera View Move '''
         self.cameraLabel.move(self.scrollArea.frameGeometry().width()-self.scrollArea.frameGeometry().x()-self.camera_size.width(), self.widget.frameGeometry().height()-self.camera_size.height())
-        self.fpsLabel.move(self.scrollArea.frameGeometry().width()-self.scrollArea.frameGeometry().x()-self.fpsLabel.frameGeometry().width(), self.widget.frameGeometry().height()-self.fpsLabel.frameGeometry().height())
-
+        self.fpsLabel.move(self.cameraLabel.frameGeometry().x(), self.cameraLabel.frameGeometry().y())
+        
     def about(self):
         QMessageBox.about(self, "GUI for test RobotControlAgent",
                         """
@@ -368,7 +375,7 @@ class QRobotTesterUI(QMainWindow):
             label.setStyleSheet("background-color: rgba(0,0,0,0%); color: black");
             label.setFont(self.font)
             label.adjustSize()
-        self.fpsLabel.move(self.scrollArea.frameGeometry().width()-self.scrollArea.frameGeometry().x()-self.fpsLabel.frameGeometry().width(), self.widget.frameGeometry().height()-self.fpsLabel.frameGeometry().height())
+        self.fpsLabel.move(self.cameraLabel.frameGeometry().x(), self.cameraLabel.frameGeometry().y())
         return result
 
 if __name__ == '__main__':
