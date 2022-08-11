@@ -5,8 +5,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from TesterUI import QRobotTesterUI
+from Tester.TesterUI import QRobotTesterUI
 from agent.RobotTestAgent import RobotTestAgent
 from utils.configure import *
 
@@ -41,12 +40,15 @@ class QRobotTester(QRobotTesterUI):
     def robot_move(self):
         ''' Blank Check '''
         x_text, y_text = self.xLineEdit.text(), self.yLineEdit.text() 
+        z_text = self.zLineEdit.text()
         if x_text == '' or y_text == '':
             return True
         
         ''' Draw target point to image '''
         try:
             x_robot, y_robot = float(x_text), float(y_text)
+            z_robot = 0 if z_text == '' else float(z_text)
+
             self.target_x_map, self.target_y_map = self.pose_on_image_from_robot(x_robot, y_robot)
             self.draw_points()
         except:
@@ -56,8 +58,7 @@ class QRobotTester(QRobotTesterUI):
 
         ''' move robot through lapras API'''
         # Check location validity
-        # Send robotMove with x_robot, y_robot
-        self.agent.move(x_robot, y_robot)
+        self.agent.move(x_robot, y_robot, z_robot)
         self.statusbar.showMessage(f'Send message : Move to ({x_robot}, {y_robot})')
         
     
@@ -88,12 +89,13 @@ class QRobotTester(QRobotTesterUI):
         self.agent.undock()
         self.statusbar.showMessage(f'Send message : Undock')
 
-    def update_robot(self, connected, x_robot=-1, y_robot=-1, robot_state='UNINITIALIZED'):
+    def update_robot(self, connected, x_robot=-1, y_robot=-1, r_robot=-999, robot_state='UNINITIALIZED'):
         if connected:
             self.agentConnectLabel.setText('Connected')
-            self.robotLocationLabel.setText(f'{x_robot:.2f}, {y_robot:.2f}')
+            self.robotLocationLabel.setText(f'{x_robot:.2f}, {y_robot:.2f}, {r_robot:.2f}')
             self.robotStateLabel.setText(f'{robot_state}')
             self.robot_x_map, self.robot_y_map = self.pose_on_image_from_robot(x_robot, y_robot)
+            self.robot_r_map = -r_robot
             self.draw_points()
         else:
             self.agentConnectLabel.setText('Disconnected')
@@ -149,9 +151,10 @@ class QRobotTester(QRobotTesterUI):
         return 
     
     def set_poi(self, poi):
-        x_robot, y_robot = poi_to_location[poi]
+        x_robot, y_robot, z_robot = poi_to_location[poi]
         self.xLineEdit.setText(f'{x_robot:.2f}')
         self.yLineEdit.setText(f'{y_robot:.2f}')
+        self.zLineEdit.setText(f'{z_robot:.2f}')
         self.target_x_map, self.target_y_map = self.pose_on_image_from_robot(x_robot, y_robot)
 
         self.draw_points()

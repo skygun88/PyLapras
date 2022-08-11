@@ -9,7 +9,6 @@ import datetime
 import numpy as np
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH") if "Linux" in platform.platform() else None
 from agent.LaprasAgent import LaprasAgent
 from utils.configure import *
@@ -21,8 +20,10 @@ class RobotTestAgent(LaprasAgent):
         self.subscribe(f'{place_name}/context/RobotControlAgentOperatingStatus', 2)
         self.subscribe(f'{place_name}/context/RobotX')
         self.subscribe(f'{place_name}/context/RobotY')
+        self.subscribe(f'{place_name}/context/RobotOrientation')
         self.subscribe(f'{place_name}/context/RobotStatus')
         self.subscribe(f'{place_name}/context/robotComplete')
+        self.subscribe(f'{place_name}/context/detectedActivity')
         
         ''' For Preventing circuit import '''
         # sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
@@ -39,6 +40,7 @@ class RobotTestAgent(LaprasAgent):
         
         ''' Robot Status '''
         self.robot_x, self.robot_y = -1, -1
+        self.robot_r = -999
         self.path = []
         self.robot_state = 'UNITITIALIZED'
         self.last_alive = -1
@@ -57,11 +59,12 @@ class RobotTestAgent(LaprasAgent):
         else:
             if self.initialized == True:
                 self.robot_x, self.robot_y = -1, -1
+                self.robot_r = -999
                 self.last_alive = -1
                 self.connected = False
         
         if self.initialized:
-            self.gui.update_robot(self.connected, self.robot_x, self.robot_y, self.robot_state)
+            self.gui.update_robot(self.connected, self.robot_x, self.robot_y, self.robot_r, self.robot_state)
 
     def on_message(self, client, userdata, msg):
         dict_string = str(msg.payload.decode("utf-8"))
@@ -74,6 +77,8 @@ class RobotTestAgent(LaprasAgent):
             self.robot_x = msg_dict.get('value')
         elif context_name == 'RobotY':
             self.robot_y = msg_dict.get('value')
+        elif context_name == 'RobotOrientation':
+            self.robot_r = msg_dict.get('value')
         elif context_name == 'RobotStatus':
             self.robot_state = msg_dict.get('value')
             print(self.robot_state)
@@ -91,7 +96,10 @@ class RobotTestAgent(LaprasAgent):
                 if self.record_flag == True:
                     self.images.append(cv_img)
                     self.ts.append(time.time())
-                    
+        elif context_name == 'detectedActivity':
+            if self.initialized and self.connect:
+                label = msg_dict['value']
+                print(f'Detected Activity : {label}')
         else:
             print('wrong')
 
@@ -116,6 +124,9 @@ class RobotTestAgent(LaprasAgent):
         ts = self.ts[:]
         runtime = ts[-1]-ts[0] if len(images) > 0 else 0
 
+        if not os.path.isdir(self.video_dir):
+            os.makedirs(self.video_dir)
+
         if runtime > 0:
             height, width, _ = images[0].shape
             size = width, height
@@ -135,8 +146,8 @@ class RobotTestAgent(LaprasAgent):
     def undock(self):
         self.publish_func('undocking', arguments=[])
 
-    def move(self, x, y):
-        self.publish_func('robotMove', arguments=[x, y, 0])
+    def move(self, x, y, z):
+        self.publish_func('robotMove', arguments=[x, y, z])
 
     def rotate(self, angle):
         self.publish_func('robotAttend', arguments=[angle])

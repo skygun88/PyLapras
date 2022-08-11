@@ -10,7 +10,7 @@ class DQN(nn.Module):
         conv11 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=6, stride=3) # (2, 15) -> (4, 4)
         conv12 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=6, stride=3) # (2, 15) -> (4, 4)
         conv13 = nn.Conv1d(in_channels=2, out_channels=4, kernel_size=6, stride=3) # (2, 15) -> (4, 4)
-        conv2 = nn.Conv1d(in_channels=12, out_channels=24, kernel_size=2, stride=1) # (12, 4) -> (24, 3)
+        conv2 = nn.Conv1d(in_channels=4*3, out_channels=24, kernel_size=2, stride=1) # (12, 4) -> (24, 3)
         fc1 = nn.Linear(24*3, 256)
         fc2 = nn.Linear(256, n_action)
         

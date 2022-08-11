@@ -1,6 +1,8 @@
 import os
 import sys
+import cv2
 import time
+import math
 import qimage2ndarray
 from PyQt5.QtCore import Qt, QEvent, QPoint, pyqtSignal, QObject
 from PyQt5.QtGui import QPixmap, QPalette, QPainter, QPen, QFont
@@ -8,7 +10,6 @@ from PyQt5.QtWidgets import QLabel, QSizePolicy, QScrollArea, QMessageBox, QMain
     QWidget, QGridLayout, QLineEdit, QPushButton, QApplication
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from utils.configure import *
 
 class CameraCommunicate(QObject):
@@ -38,6 +39,7 @@ class QRobotTesterUI(QMainWindow):
         self.last_time_move_x, self.last_time_move_y = 0, 0
         self.target_x_map, self.target_y_map = -1, -1
         self.robot_x_map, self.robot_y_map = -1, -1
+        self.robot_r_map = 0
         self.last_camera_ts = -1
         self.drag = False
         self.setMouseTracking(True)
@@ -70,12 +72,15 @@ class QRobotTesterUI(QMainWindow):
         ''' Line Edits '''
         self.xLineEdit = QLineEdit()
         self.yLineEdit = QLineEdit()
+        self.zLineEdit = QLineEdit()
         self.rLineEdit = QLineEdit()
         self.xLineEdit.setStyleSheet("background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);")
         self.yLineEdit.setStyleSheet("background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);")
+        self.zLineEdit.setStyleSheet("background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);")
         self.rLineEdit.setStyleSheet("background-color: rgb(255, 255, 255); color: rgb(0, 0, 0);")
         self.xLineEdit.setPlaceholderText('x (example: 49.5)')
         self.yLineEdit.setPlaceholderText('y (example: 47.6)')
+        self.zLineEdit.setPlaceholderText('r (-180 ~ 180)')
         self.rLineEdit.setPlaceholderText('theta (-180 ~ 180)')
         
         ''' Buttons '''
@@ -101,11 +106,12 @@ class QRobotTesterUI(QMainWindow):
         
         self.gridupper.addWidget(self.xLineEdit, 0, 0)
         self.gridupper.addWidget(self.yLineEdit, 0, 1)
-        self.gridupper.addWidget(self.goButton, 0, 2)
-        self.gridupper.addWidget(self.rLineEdit, 0, 3)
-        self.gridupper.addWidget(self.rotateButton, 0, 4)
-        self.gridupper.addWidget(self.dockButton, 0, 5)
-        self.gridupper.addWidget(self.undockButton, 0, 6)
+        self.gridupper.addWidget(self.zLineEdit, 0, 2)
+        self.gridupper.addWidget(self.goButton, 0, 3)
+        self.gridupper.addWidget(self.rLineEdit, 0, 4)
+        self.gridupper.addWidget(self.rotateButton, 0, 5)
+        self.gridupper.addWidget(self.dockButton, 0, 6)
+        self.gridupper.addWidget(self.undockButton, 0, 7)
 
         self.gridlayout.addLayout(self.gridupper, 0, 0)
         self.gridlayout.addWidget(self.scrollArea, 1, 0)
@@ -206,8 +212,11 @@ class QRobotTesterUI(QMainWindow):
 
 
     def update_camera(self, img):
+        w, h, _ = img.shape
+        img = cv2.resize(img, (w//2, h//2), interpolation=cv2.INTER_AREA)
         qImg = qimage2ndarray.array2qimage(img)
-        self.cameraLabel.setPixmap(QPixmap.fromImage(qImg))
+        qPixmap = QPixmap.fromImage(qImg)
+        self.cameraLabel.setPixmap(qPixmap)
         self.cameraLabel.update()
 
         if self.last_camera_ts > 0:
@@ -241,12 +250,23 @@ class QRobotTesterUI(QMainWindow):
         self.pixmap = self.ori_pixmap.copy()
         painter = QPainter(self.pixmap)
         if self.target_x_map > 0 and self.target_y_map > 0:
-            painter.setPen(QPen(Qt.red, 3, Qt.SolidLine))
-            painter.drawPoint(QPoint(self.target_x_map, self.target_y_map))        
-        if self.robot_x_map > 0 and self.robot_y_map > 0 :
-            painter.setPen(QPen(Qt.green, 3, Qt.SolidLine))
+            ''' Draw Target Point '''
+            painter.setPen(QPen(Qt.red, 5, Qt.SolidLine))
+            painter.drawPoint(QPoint(self.target_x_map, self.target_y_map))
+
+        if self.robot_x_map > 0 and self.robot_y_map > 0:
+            ''' Draw Robot Point'''
+            painter.setPen(QPen(Qt.green, 5, Qt.SolidLine))
             painter.drawPoint(QPoint(self.robot_x_map, self.robot_y_map))
+    
+            ''' Draw Orientation '''
+            painter.setPen(QPen(Qt.blue, 1.5, Qt.SolidLine))
+            dx = math.cos(math.pi *(self.robot_r_map/180))*6
+            dy = math.sin(math.pi *(self.robot_r_map/180))*6
+            painter.drawLine(self.robot_x_map, self.robot_y_map, self.robot_x_map + dx, self.robot_y_map + dy)
         self.update()
+
+
 
     def paintEvent(self, ev):
         qp = QPainter(self)
