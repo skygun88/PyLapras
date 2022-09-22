@@ -21,6 +21,30 @@ from utils.comfort import PMV
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def upload_replay2(start_ts, ts, state, classes):
+    ''' Connect DB '''
+    json_file = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))+'/resources/db_info.json'
+    with open(json_file, 'r') as f:
+        db_info = json.load(f)
+        f.close()
+
+    client = pm.MongoClient(db_info['address'])
+    client.data.authenticate(db_info['autheticate']['name'], db_info['autheticate']['pw'], mechanism=db_info['autheticate']['mechanism'])
+    
+    db = client.data
+    place='N1Lounge8F'
+    place_to_db = {'N1Lounge8F': db.N1Lounge8F_replay2}
+    data = place_to_db[place]
+
+    ''' Upload Data document '''
+    row = {'start': start_ts, 'timestamp': ts}
+    row = {**row, **dict(zip(classes, state))}
+
+    data.insert_one(row)
+        
+    client.close()
+
+
 def upload_replay(place, start_ts, ts, state):
     ''' Connect DB '''
     json_file = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))+'/resources/db_info.json'
@@ -30,6 +54,7 @@ def upload_replay(place, start_ts, ts, state):
 
     client = pm.MongoClient(db_info['address'])
     client.data.authenticate(db_info['autheticate']['name'], db_info['autheticate']['pw'], mechanism=db_info['autheticate']['mechanism'])
+
     db = client.data
     place_to_db = {'N1Lounge8F': db.N1Lounge8F_replay, 'N1SeminarRoom825': db.N1SeminarRoom825_replay, 'HomeIO': db.HomeIO_replay}
     data = place_to_db[place]

@@ -14,19 +14,17 @@ from agent.LaprasAgent import LaprasAgent
 from utils.configure import *
 
 class FeedbackCollectorAgent(LaprasAgent):
-    def __init__(self, gui, agent_name='FeedbackCollectorAgent', place_name='N1Lounge8F'):
+    def __init__(self, gui, agent_name='FeedbackCollectorAgent', place_name='Robot', sensor_place='N1Lounge8F'):
         super().__init__(agent_name, place_name)
-
+        self.sensor_place = sensor_place
         self.sub_contexts = ['sensor0_Temperature', 'sensor1_Temperature', 'sensor0_Humidity', 'sensor1_Humidity', 'Aircon0Power', 'Aircon1Power']
         for context in self.sub_contexts:
-            self.subscribe(f'{place_name}/context/{context}')
+            self.subscribe(f'{self.sensor_place}/context/{context}')
         
         
         ''' For Preventing circuit import '''
         from Interface.FeedbackCollector import QFeedbackCollector
         self.gui: QFeedbackCollector = gui
-        
-
 
     def on_message(self, client, userdata, msg):
         dict_string = str(msg.payload.decode("utf-8"))
@@ -52,48 +50,24 @@ class FeedbackCollectorAgent(LaprasAgent):
             print('wrong')
 
 
-    # def power_up(self):
-    #     if self.gui.ac_mode == 0:
-    #         self.publish_func('StartAircon0')
-    #         # self.publish_func('StartAircon1')
-    #     elif self.gui.ac_mode == 1:
-    #         self.publish_func('StartAircon0')
-    #         self.publish_func('StartAircon1')
-    #     else:
-    #         print('error occur in Power UP')
-    #         sys.exit()
-
-
-    # def power_down(self):
-    #     if self.gui.ac_mode == 2:
-    #         # self.publish_func('StopAircon0')
-    #         self.publish_func('StopAircon1')
-    #     elif self.gui.ac_mode == 1:
-    #         self.publish_func('StopAircon0')
-    #         self.publish_func('StopAircon1')
-    #     else:
-    #         print('error occur in Power DOWN')
-    #         sys.exit()
-    
     def power_up(self):
         self.publish_func('PowerUpAC')
-
-
 
     def power_down(self):
         self.publish_func('PowerDownAC')
 
 
     def set_ac(self, mode):
+        print(f'set {mode}')
         if mode == 0:
-            self.publish_func('StopAircon0')
-            self.publish_func('StopAircon1')
+            self.publish_func('StopAircon0', place=self.sensor_place)
+            self.publish_func('StopAircon1', place=self.sensor_place)
         elif mode == 1:
-            self.publish_func('StartAircon0')
-            self.publish_func('StopAircon1')
+            self.publish_func('StartAircon0', place=self.sensor_place)
+            self.publish_func('StopAircon1', place=self.sensor_place)
         elif mode == 2:
-            self.publish_func('StartAircon0')
-            self.publish_func('StartAircon1')
+            self.publish_func('StartAircon0', place=self.sensor_place)
+            self.publish_func('StartAircon1', place=self.sensor_place)
         else:
             print('error occur in SET AC')
             sys.exit()

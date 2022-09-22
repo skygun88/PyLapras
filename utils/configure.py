@@ -5,6 +5,7 @@ AGENT_PATH = os.path.join(ROOT_PATH, 'agent')
 RESOURCE_PATH = os.path.join(ROOT_PATH, 'resources')
 MAP_PATH = os.path.join(ROOT_PATH, 'map')
 TESTER_PATH = os.path.join(ROOT_PATH, 'Tester')
+WEIGHT_PATH = os.path.join(RESOURCE_PATH, 'weight')
 
 poi_to_location = {'p0': (49.9553, 50.5662, 90), 
                    'p1': (47.7419, 50.6098, -90),

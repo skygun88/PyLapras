@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QApplication
 sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
 from Tester.TesterUI import QRobotTesterUI
 from agent.RobotTestAgent import RobotTestAgent
+from agent.MonnitTestAgent import MonnitTestAgent
 from utils.configure import *
 
 class QRobotTester(QRobotTesterUI):
@@ -14,7 +15,12 @@ class QRobotTester(QRobotTesterUI):
         super().__init__()
         self.initialize_handler()
         self.agent: RobotTestAgent = RobotTestAgent(self)
+        self.sensor_agent: MonnitTestAgent = MonnitTestAgent(self)
         self.agent_t = None
+
+        self.sensor_agent_t = Thread(target=self.sensor_agent.loop_forever)
+        self.sensor_agent_t.daemon = True
+        self.sensor_agent_t.start()
 
     def initialize_handler(self):
         ''' Handlers '''
@@ -172,6 +178,10 @@ class QRobotTester(QRobotTesterUI):
     def close(self):
         self.disconnect_robot()
         return super().close()
+
+    def update_user(self, x_robot, y_robot):
+        self.user_map = self.pose_on_image_from_robot(x_robot, y_robot)
+        self.draw_points()
     
 
 if __name__ == '__main__':

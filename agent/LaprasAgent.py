@@ -17,13 +17,13 @@ class LaprasAgent(mqtt.Client):
         self.connect()
 
     ''' Publisher for Lapras (Decided Placename & Publisher) '''
-    def publish(self, type, name, msg, qos=2, retain=False):
+    def publish(self, type, name, msg, place=None, qos=2, retain=False):
         ''' type: [context, functionality, action, task] '''
-        topic = f'{self.place_name}/{type}/{name}' 
+        topic = f'{self.place_name}/{type}/{name}' if place==None else f'{place}/{type}/{name}'
         json_msg = json.dumps(msg)
         return super().publish(topic, payload=json_msg, qos=qos, retain=retain, properties=None)
 
-    def publish_func(self, name, arguments=[], qos=2, retain=False):
+    def publish_func(self, name, arguments=[], place=None, qos=2, retain=False):
         msg = {
             'type': 'functionality',
             'name': name,
@@ -32,9 +32,9 @@ class LaprasAgent(mqtt.Client):
         }
         if len(arguments) > 0:
             msg['arguments'] = arguments
-        return self.publish('functionality', name, msg, qos=qos, retain=retain)
+        return self.publish('functionality', name, msg, place=place, qos=qos, retain=retain)
     
-    def publish_action(self, name, arguments=[], qos=2, retain=False):
+    def publish_action(self, name, arguments=[], place=None, qos=2, retain=False):
         msg = {
             'type': 'action',
             'name': name,
@@ -43,9 +43,9 @@ class LaprasAgent(mqtt.Client):
         }
         if len(arguments) > 0:
             msg['arguments'] = arguments
-        return self.publish('action', name, msg, qos=qos, retain=retain)
+        return self.publish('action', name, msg, qos=qos, place=place, retain=retain)
 
-    def publish_context(self, name, value, qos=2, retain=False):
+    def publish_context(self, name, value, qos=2, place=None, retain=False):
         msg = {
             'type': 'context',
             'name': name,
@@ -54,7 +54,7 @@ class LaprasAgent(mqtt.Client):
             'publisher': self.agent_name,
             'timestamp': self.curr_timestamp()
         }
-        return self.publish('context', name, msg, qos=qos, retain=retain)
+        return self.publish('context', name, msg, qos=qos, place=place, retain=retain)
 
     # def publish(self, topic, payload=None, qos=0, retain=False, properties=None): # original one
     #     return super().publish(topic, payload=payload, qos=qos, retain=retain, properties=properties)

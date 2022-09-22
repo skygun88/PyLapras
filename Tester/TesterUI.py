@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QLabel, QSizePolicy, QScrollArea, QMessageBox, QMain
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
 from utils.configure import *
-
+from map.n1map import LoungeSensorMap
 class CameraCommunicate(QObject):
     cameraReceive = pyqtSignal(object)
 
@@ -44,6 +44,7 @@ class QRobotTesterUI(QMainWindow):
         self.drag = False
         self.setMouseTracking(True)
 
+
     def initWindow(self):
         self.setWindowTitle("RobotController")
         self.setStyleSheet("background-color:rgb(255,255,255);")
@@ -67,6 +68,13 @@ class QRobotTesterUI(QMainWindow):
         self.scrollArea.setStyleSheet("background-color:rgb(150,150,150);")
         self.scrollBarV = self.scrollArea.verticalScrollBar()
         self.scrollBarH = self.scrollArea.horizontalScrollBar()
+
+        self.user_map = None, None
+        self.sensor_map = LoungeSensorMap()
+        self.draw_sensors()
+        
+
+
 
     def initObjects(self):
         ''' Line Edits '''
@@ -246,17 +254,49 @@ class QRobotTesterUI(QMainWindow):
         painter.drawPoint(QPoint(x_map, y_map))        
         self.update()
 
-    def draw_points(self):
+    def draw_sensor_points(self, painter):
+        act_names, act_locs, act_acts = self.sensor_map.get_activities()
+        mot_names, mot_locs, mot_acts = self.sensor_map.get_motions()
+
+        for idx, (act_x_robot, act_y_robot) in enumerate(act_locs):
+            act_x_map, act_y_map = self.pose_on_image_from_robot(act_x_robot, act_y_robot)
+            color = Qt.green if (time.time() - act_acts[act_names[idx]]) < 5 else Qt.magenta
+            painter.setPen(QPen(color, 2, Qt.SolidLine))
+            painter.drawPoint(QPoint(act_x_map, act_y_map))
+        
+        for idx, (mot_x_robot, mot_y_robot) in enumerate(mot_locs):
+            mot_x_map, mot_y_map = self.pose_on_image_from_robot(mot_x_robot, mot_y_robot)
+            color = Qt.green if (time.time() - mot_acts[mot_names[idx]]) < 5 else Qt.darkYellow
+            painter.setPen(QPen(color, 2, Qt.SolidLine))
+            painter.drawPoint(QPoint(mot_x_map, mot_y_map))
+
+        if self.user_map[0] != None:
+            painter.setPen(QPen(Qt.blue, 4, Qt.SolidLine))
+            painter.drawPoint(QPoint(self.user_map[0], self.user_map[1]))
+
+
+    def draw_sensors(self):
         self.pixmap = self.ori_pixmap.copy()
         painter = QPainter(self.pixmap)
+
+        self.draw_sensor_points(painter)
+        self.update()
+
+    def draw_points(self):
+        # self.draw_sensors()
+        self.pixmap = self.ori_pixmap.copy()
+        painter = QPainter(self.pixmap)
+
+        self.draw_sensor_points(painter)
+
         if self.target_x_map > 0 and self.target_y_map > 0:
             ''' Draw Target Point '''
-            painter.setPen(QPen(Qt.red, 5, Qt.SolidLine))
+            painter.setPen(QPen(Qt.red, 4, Qt.SolidLine))
             painter.drawPoint(QPoint(self.target_x_map, self.target_y_map))
 
         if self.robot_x_map > 0 and self.robot_y_map > 0:
             ''' Draw Robot Point'''
-            painter.setPen(QPen(Qt.green, 5, Qt.SolidLine))
+            painter.setPen(QPen(Qt.green, 4, Qt.SolidLine))
             painter.drawPoint(QPoint(self.robot_x_map, self.robot_y_map))
     
             ''' Draw Orientation '''

@@ -15,8 +15,8 @@ class PMV:
         return (np.e)**(16.6536-(4030.183/(T+235)))
 
     def calculatePMV(self):
-        # PA = self.humidity * 10 * self.FNPS(self.temperature)
-        PA = (0.61094*np.e**(17.625*self.temperature/(self.temperature+243.04)))*1000
+        PA = self.humidity * 10 * self.FNPS(self.temperature)
+        # PA = (0.61094*np.e**(17.625*self.temperature/(self.temperature+243.04)))*1000
         # print(PA)
         ICL = self.clothing_index * 0.155
         M = self.metabolism_index * 58.15

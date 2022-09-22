@@ -17,7 +17,7 @@ class RobotTestAgent(LaprasAgent):
     def __init__(self, gui, agent_name='RobotTestAgent', place_name='Robot'):
         super().__init__(agent_name, place_name)
         self.subscribe(f'{place_name}/context/RobotDetectedImage')
-        self.subscribe(f'{place_name}/context/RobotControlAgentOperatingStatus', 2)
+        self.subscribe(f'{place_name}/context/RobotAlive', 2)
         self.subscribe(f'{place_name}/context/RobotX')
         self.subscribe(f'{place_name}/context/RobotY')
         self.subscribe(f'{place_name}/context/RobotOrientation')
@@ -47,6 +47,7 @@ class RobotTestAgent(LaprasAgent):
         self.initialized = False
         self.connected = False
         
+        
     def timer_callback(self):      
         self.timer_cnt += 1
         self.connected = self.check_connected()
@@ -71,7 +72,7 @@ class RobotTestAgent(LaprasAgent):
         msg_dict = json.loads(dict_string)
         context_name = msg_dict.get('name')
         
-        if context_name == 'RobotControlAgentOperatingStatus':
+        if context_name == 'RobotAlive':
             self.last_alive = msg_dict.get('timestamp')
         elif context_name == 'RobotX':
             self.robot_x = msg_dict.get('value')
@@ -108,7 +109,7 @@ class RobotTestAgent(LaprasAgent):
             
     def check_connected(self):
         now = int(time.time()*1000)
-        connected = self.robot_x > 0 and self.robot_y > 0 and now - self.last_alive < 1000*15 
+        connected = (self.robot_x > 0) and (self.robot_y > 0) and ((now - self.last_alive) < 1000*15) 
         return connected
     
     def start_record(self):

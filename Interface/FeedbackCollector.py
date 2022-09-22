@@ -11,9 +11,11 @@ from agent.FeedbackCollectorAgent import FeedbackCollectorAgent
 from utils.configure import *
 
 class QFeedbackCollector(QFeebackCollectorUI):
-    def __init__(self):
+    def __init__(self, sensor_place='N1Lounge8F'):
         super().__init__()
         self.initialize_handler()
+
+        self.sensor_place = sensor_place
 
         self.tem1, self.tem2 = None, None
         self.hum1, self.hum2 = None, None
@@ -21,7 +23,7 @@ class QFeedbackCollector(QFeebackCollectorUI):
         self.last_update = None
         self.ac_mode = None
 
-        self.agent: FeedbackCollectorAgent = FeedbackCollectorAgent(self)
+        self.agent: FeedbackCollectorAgent = FeedbackCollectorAgent(self, sensor_place=self.sensor_place)
         self.agent_t = Thread(target=self.agent.loop_forever)
         self.agent_t.daemon = True
         self.agent_t.start()
@@ -114,5 +116,6 @@ class QFeedbackCollector(QFeebackCollectorUI):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     tester = QFeedbackCollector()
+    # tester = QFeedbackCollector(sensor_place='N1SeminarRoom825')
     tester.show()
     sys.exit(app.exec_())

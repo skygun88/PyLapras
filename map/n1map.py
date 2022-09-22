@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -42,6 +43,61 @@ class N1Map:
 
     def pose_to_index(self, x, y):
         return min(int(x*10), 999), min(int(y*10), 999)
+
+class LoungeSensorMap:
+    def __init__(self) -> None:
+        with open(os.path.join(MAP_PATH, 'lounge_monnit.json'), 'r') as f:
+            sensor_json = json.load(f)
+            f.close()
+        self.activity_locs = sensor_json['Activity']
+        self.motion_locs = sensor_json['Motion']
+
+        self.activity_names = ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10']
+        self.motion_names = ['M01', 'M02', 'M03', 'M04', 'M07', 'M08']
+
+        self.activity_last = dict(zip(self.activity_names, [0]*len(self.activity_names)))
+        self.motion_last = dict(zip(self.motion_names, [0]*len(self.motion_names)))
+
+    def get_activities(self):
+        locs = [self.activity_locs[sensor] for sensor in self.activity_names]
+        return self.activity_names, locs, self.activity_last
+
+    def get_motions(self):
+        locs = [self.motion_locs[sensor] for sensor in self.motion_names]
+        return self.motion_names, locs, self.motion_last
+
+    def update_sensor(self, sensor_name, state):
+        if sensor_name in self.activity_names:
+            self.activity_last[sensor_name] = state
+        elif sensor_name in self.motion_names:
+            self.motion_last[sensor_name] = state
+
+    def get_sensor(self, sensor_name):
+        state = -1
+        if sensor_name in self.activity_names:
+            state = self.activity_last[sensor_name]
+        elif sensor_name in self.motion_names:
+            state = self.motion_last[sensor_name]
+        return state
+
+    def get_latest(self, number=1):
+        return_number = 1 if number == 0 else number
+
+        coupled_names = self.activity_names + self.motion_names
+        coupled_last = [self.activity_last[x] for x in self.activity_names] + [self.motion_last[x] for x in self.motion_names]
+        coupled = list(map(lambda x, y: [x, y], coupled_names, coupled_last))
+        sorted_coupled = sorted(coupled, key=lambda x: x[1], reverse=True)
+        return sorted_coupled[:return_number]
+
+    def get_loc(self, sensor_name):
+        if sensor_name in self.activity_names:
+            loc = self.activity_locs[sensor_name]
+        elif sensor_name in self.motion_names:
+            loc = self.motion_locs[sensor_name]
+        return loc
+    
+
+
 
 if __name__ == '__main__':
     map = N1Map()
