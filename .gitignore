@@ -4,7 +4,7 @@
 *.mp4
 *.png
 db_info.json
-har/*
-har/openpose/*
-clothing/*
-weight/*
+
+utils/har/*
+utils/clothing/*
+resource/weight/*
