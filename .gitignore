@@ -4,6 +4,7 @@
 *.mp4
 *.png
 db_info.json
+..bfg-report
 
 # utils/har/*
 # utils/clothing/*
