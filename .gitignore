@@ -6,9 +6,6 @@
 db_info.json
 ..bfg-report
 
-# utils/har/*
-# utils/clothing/*
-# utils/detect/*
 utils/clothing/yolo/weights/darknet53.conv.74
 utils/clothing/yolo/weights/yolov3-df2_15000.weights
 utils/clothing/yolo/weights/yolov3-modanet_last.weights
@@ -16,4 +13,5 @@ utils/clothing/yolo/weights/yolov3-tiny.weights
 utils/clothing/yolo/weights/yolov3.weights
 
 resource/weight/*
+resource/api_data.json
 Tester/video/*
