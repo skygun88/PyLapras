@@ -17,11 +17,26 @@ Image: 1000x1000 -> Pose axis: 100x100
 class N1Map:
     def __init__(self):
         self.map, self.map_img = self.load()
+        self.robot_locs = self.load_robot(n_points=4)
+        # print(self.robot_locs)
 
     def load(self):
         df = pd.read_csv(os.path.join(MAP_PATH, 'map.csv'), header=None, index_col=None)
         img = Image.open(os.path.join(MAP_PATH, 'current_map.png'))
         return df.to_numpy().transpose(), img
+
+    def load_robot(self, n_points=5):
+        with open(os.path.join(MAP_PATH, 'loc.json'), 'r') as f:
+            robot_json = json.load(f)
+            f.close()
+        robot_start = np.array(robot_json['start'])
+        robot_end = np.array(robot_json['end'])
+
+        unit_vector = (robot_end-robot_start)/(n_points-1)
+        robot_locs = np.stack([robot_start + unit_vector*i for i in range(n_points)])
+        return robot_locs
+
+
 
     def is_reachable(self, curr_x, curr_y, target_x, target_y):
         pass
@@ -46,14 +61,36 @@ class N1Map:
 
 class LoungeSensorMap:
     def __init__(self) -> None:
-        with open(os.path.join(MAP_PATH, 'lounge_monnit.json'), 'r') as f:
+        # with open(os.path.join(MAP_PATH, 'lounge_monnit.json'), 'r') as f:
+        #     sensor_json = json.load(f)
+        #     f.close()
+        with open(os.path.join(MAP_PATH, 'lounge_expected.json'), 'r') as f:
             sensor_json = json.load(f)
             f.close()
         self.activity_locs = sensor_json['Activity']
         self.motion_locs = sensor_json['Motion']
 
-        self.activity_names = ['S01', 'S02', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10']
-        self.motion_names = ['M01', 'M02', 'M03', 'M04', 'M07', 'M08']
+        # self.activity_names = ['S01', 'S03', 'S04', 'S05', 'S06', 'S07', 'S08', 'S09', 'S10']
+        self.activity_names = [
+            'S01', 
+            'S02', 
+            'S03', 
+            'S04', 
+            'S05', 
+            'S06', 
+            'S07', 
+            'S08', 
+            'S09', 
+            'S10'
+            ]
+        self.motion_names = [
+            'M01', 
+            'M02', 
+            'M03', 
+            'M04', 
+            'M07', 
+            'M08'
+            ]
 
         self.activity_last = dict(zip(self.activity_names, [0]*len(self.activity_names)))
         self.motion_last = dict(zip(self.motion_names, [0]*len(self.motion_names)))
@@ -90,6 +127,7 @@ class LoungeSensorMap:
         return sorted_coupled[:return_number]
 
     def get_loc(self, sensor_name):
+        sensor_name = sensor_name.upper()
         if sensor_name in self.activity_names:
             loc = self.activity_locs[sensor_name]
         elif sensor_name in self.motion_names:

@@ -1,0 +1,17 @@
+{
+    "USER_ID": "skygun88@naver.com",
+    "USER_PASSWORD": "1235813kiM!h",
+    "REDIRECT_URI": "http://143.248.55.163:8080/redirect",
+    "CLIENT_ID": "e998e9236f65477781e0a38a656b89e2",
+    "CLIENT_SECRET": "78b27ae265074c738424e988227d3359",
+    "ACCESS_TOKEN": "599306ae-9445-4161-94cc-9573c64850ef",
+    "REFRESH_TOKEN": "88ba6402-dc50-4749-91dc-718f8d8a21ad",
+    "EXPIRE": 15551999,
+    "MOTION_ID": "ebf9b65f88a6aca6c8rf5v",
+    "PLUG_ID": "ebfab25b3293140771rubl",
+    "LIGHT_ID": "18053525e8db84f0b20c",
+    "IR_AIRCON_ID": "ebef6089ca3dc9439dbbjg",
+    "IR_FAN_ID": "eb4e959b2dcb1bc19ewwpc",
+    "FAMILY_NAME": "N1Lounge8F",
+    "FAMILY_ID": 66408439
+}

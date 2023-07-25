@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+	<head>
+		<meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0">
+		<meta http-equiv="refresh" content="5">
+	</head>
+
+	<body>
+		<h1>User Feedback Interface</h1>
+
+		<!-- <h2>Description</h2>
+
+		This is the test for the Fast API on mobile page -->
+		<h2>Data</h2>
+		<h3>Raw Sensor</h3>
+			<ul>
+				<li>Temperature : $tem0 | $tem1 </li>
+				<li>Humidity : $hum0 | $hum1 </li>
+				<li>Aircon : $ac_power | $ac_temperature </li>
+		  	</ul>
+		<h3>State</h3>
+		<ul>
+			<li>Temperature : $tem_state </li>
+			<li>Humidity : $hum_state </li>
+			<li>Aircon [0|1|2|3|4]: $ac_state </li>
+		</ul>
+		<h3>Robot</h3>
+		<ul>
+			<li>State: $rl_state</li>
+		</ul>
+
+		<h2>Control by Robot </h2>
+		<h3>Feedback to Robot</h3>
+		<p>
+			<div style="float: left">
+				<form action="/tempUP", method="POST" >
+					<button type="submit">Temp UP</button>
+				</form>
+			</div>
+			<div>
+				<form style="float: left" action="/tempStill", method="POST" >
+					<button type="submit">Satisfied</button>
+				</form>		
+			</div style="float: left">
+			<div>
+				<form action="/tempDOWN", method="POST" >
+					<button type="submit">Temp DOWN</button>
+				</form>		
+			</div style="float: left">
+				
+		</p>
+		<h3>Direct Control</h3>
+		<p>
+			<div>
+				<div style="float: left">
+					<form action="/PowerON", method="POST" >
+						<button type="submit">Power ON</button>
+					</form>	
+				</div>
+				<div style="float: left">
+					<form action="/PowerOFF", method="POST" >
+						<button type="submit">Power OFF</button>
+					</form>	
+				</div>
+			</div>
+		</p>
+		<br>
+		<p>
+			<div>
+				<form action="/set_ac/", method="POST" id="form" enctype="multipart/form-data">
+					<input type = "range" id="rangeInput" min = "25" max = "28" step="1" name="point" value="0" oninput="amount.value=rangeInput.value">
+					<output id="amount" name="amount" for="rangeInput">25</output>
+					<button type="submit">Set Temperature</button>
+				</form>
+			</div>
+		</p>
+		
+			
+			
+			
+		
+
+
+		
+	</body>
+</html>

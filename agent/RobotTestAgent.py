@@ -9,7 +9,7 @@ import datetime
 import numpy as np
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
-os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH") if "Linux" in platform.platform() else None
+# os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH") if "Linux" in platform.platform() else None
 from agent.LaprasAgent import LaprasAgent
 from utils.configure import *
 
@@ -24,6 +24,7 @@ class RobotTestAgent(LaprasAgent):
         self.subscribe(f'{place_name}/context/RobotStatus')
         self.subscribe(f'{place_name}/context/robotComplete')
         self.subscribe(f'{place_name}/context/detectedActivity')
+        
         
         ''' For Preventing circuit import '''
         # sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
@@ -133,10 +134,20 @@ class RobotTestAgent(LaprasAgent):
             size = width, height
             fps = len(images) / runtime            
             now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            out = cv2.VideoWriter(os.path.join(self.video_dir, f'{now}.mp4'), cv2.VideoWriter_fourcc(*'FMP4'), fps, size)
-            for frame in images:
-                out.write(frame)
-            out.release()
+            # out = cv2.VideoWriter(f'video/{now}.mp4', cv2.VideoWriter_fourcc(*'FMP4'), fps, size)
+            # out = cv2.VideoWriter(os.path.join(self.video_dir, f'{now}.mp4'), cv2.VideoWriter_fourcc(*'FMP4'), fps, size)
+            # for frame in images:
+            #     out.write(frame)
+            # out.release()
+
+            now_path = os.path.join(self.video_dir, f'{now}')
+            if not os.path.isdir(now_path):
+                os.makedirs(now_path)
+
+            for frame_idx, frame in enumerate(images):
+                cv2.imwrite(os.path.join(now_path, f'{frame_idx}.png'), frame)
+
+
 
         self.ts.clear()
         self.images.clear()

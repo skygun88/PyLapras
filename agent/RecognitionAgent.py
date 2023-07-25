@@ -3,17 +3,23 @@ import cv2
 import sys
 import json
 import time
+import math
 import base64
 import datetime
 import numpy as np
+from image_enhancement import image_enhancement
+
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)).split('PyLapras')[0]+'PyLapras')
 from agent.LaprasAgent import LaprasAgent
 from utils.configure import *
+
+from map.n1map import N1Map, LoungeSensorMap
+from utils.measurement import *
+
+from utils.detect.HumanDetector import HumanDetector
 from utils.har.openpose.OpenPoseHAR import OpenPoseHAR
 from utils.clothing.YoloClothing import YoloClothing
-from map.n1map import N1Map, LoungeSensorMap
-
 
 SHORT_SLEEVE_TOP = 0
 LONG_SLEEVE_TOP = 1
@@ -29,16 +35,22 @@ LONG_SLEEVE_DRESS = 10
 VEST_DRESS = 11
 SLING_DRESS = 12
 
+INNER, OUTER = 0, 1
+SIT, STAND, LIE = 0, 1, 2
+FAIL = -1
+CLOTHES = {FAIL: "FAIL", INNER: "INNER", OUTER: "OUTER"}
+ACTIVITY = {FAIL: "FAIL", SIT: "SIT", STAND: "STAND", LIE: ""}
+
+
 
 class RecognitionAgent(LaprasAgent):
     def __init__(self, agent_name='RecognitionAgent', place_name='Robot', sensor_place='N1Lounge8F'):
         super().__init__(agent_name, place_name)
         
-        self.subscribe(f'{place_name}/context/RobotControlAgentOperatingStatus')
-
-        self.create_timer(self.timer_callback, timer_period=1)
+        self.create_timer(self.timer_callback, timer_period=5)
         # self.timer_cnt = 0
         ''' Modules '''
+        self.detect_model = HumanDetector()
         self.har_model = OpenPoseHAR()
         self.clothing_model = YoloClothing()
         self.sensor_map: LoungeSensorMap = LoungeSensorMap()
@@ -48,6 +60,8 @@ class RecognitionAgent(LaprasAgent):
         self.last_alive = -1
         self.connected = False
         self.last_connected = False
+        self.last_activity = -1
+        self.last_clothing = -1
 
         ''' For Robot control & Human detection '''
         self.robot_loc = [-1, -1]
@@ -62,16 +76,25 @@ class RecognitionAgent(LaprasAgent):
         self.bbox_loc = -1, -1
         self.bbox_size = -1, -1
         self.img_size = 848, 480
-        self.img_center = self.img_size//2
+        self.img_center = self.img_size[0]//2
         
         self.theta = 80
         self.ratio_coefficient = 0.1
+
+        self.kernel_sharpening = np.array([[-1, -1, -1],[-1, 9, -1],[-1, -1, -1]])
+        
+        self.video_path = os.path.join(os.path.join(RESOURCE_PATH, 'video'), f'{int(time.time())}')
+        if not os.path.isdir(self.video_path):
+            os.makedirs(self.video_path)
+
+        
+        self.locations = []
 
 
 
 
         ''' Subscribe from robot '''
-        self.robot_contexts = ['RobotDetectedImage', 'RobotControlAgentOperatingStatus', 'RobotX', 'RobotY', 'RobotStatus', 'RobotOrientation']
+        self.robot_contexts = ['RobotDetectedImage', 'RobotAlive', 'RobotX', 'RobotY', 'RobotStatus', 'RobotOrientation']
         for robot in self.robot_contexts:
             self.subscribe(f'{place_name}/context/{robot}')
 
@@ -87,14 +110,15 @@ class RecognitionAgent(LaprasAgent):
 
 
         
-    def timer_callback(self):      
-        # self.timer_cnt += 1
+    def timer_callback(self):   
+
+        # print(f'Memory in timer- {check_memory_usage():.3f} GB')
         self.connected = self.check_connected()
         if self.last_connected == True and self.connected == False:
             self.har_model.reset_tracker()
         self.last_connected = self.connected
 
-        if (time.time() - self.last_user_detected) < 10:
+        if (time.time() - self.last_user_detected) > 15:
             self.user_in_camera = False
             self.bbox_loc = -1, -1
 
@@ -105,25 +129,32 @@ class RecognitionAgent(LaprasAgent):
         if len(filtered) > 0:
             self.candiate_queue = [self.sensor_map.get_loc(sensor[0]) for sensor in filtered]
         
+        print(self.connected, self.robot_state, len(self.candiate_queue), self.user_in_camera)
         if self.connected and (self.robot_state == 'READY'):
             if (len(self.candiate_queue) > 0) and (self.user_in_camera == False):
                 candidate_loc = self.candiate_queue[self.anchor]
                 robot_loc = self.robot_loc
-
+                print(robot_loc, candidate_loc)
                 user_angle = self.calculate_difference(robot_loc, candidate_loc)
                 print(f'Angle difference: {user_angle}, robot: {self.robot_r}')
 
                 ''' user detect '''
                 rotational_angle = self.calculate_rotation(self.robot_r, user_angle)
                 self.publish_func('robotAttend', arguments=[rotational_angle])
+                time.sleep(10)
                 ''' if there is no human, increase anchor value '''
 
             if self.user_in_camera:
-                if abs(self.bbox_loc - self.img_center) > 100:
-                    rotational_angle = (self.theta/2)*((self.img_center - self.bbox_loc)/self.img_center) 
+                if abs(self.bbox_loc[0] - self.img_center) > 100:
+                    rotational_angle = (self.theta/2)*((self.img_center - self.bbox_loc[0])/self.img_center) 
                     self.publish_func('robotAttend', arguments=[int(rotational_angle)]) 
+                    time.sleep(10)
 
-                self.estimate_distance(self.robot_r, self.bbox_size)
+                
+                print(f'Activity: {ACTIVITY[self.last_activity]} | Clothing: {CLOTHES[self.last_clothing]}')
+
+                distance, estimated_loc = self.estimate_loc(self.robot_loc, self.robot_r, self.bbox_size)
+                print(f'Estimated location: {estimated_loc}, distance: {distance}')
 
 
 
@@ -142,7 +173,8 @@ class RecognitionAgent(LaprasAgent):
         context_name = msg_dict.get('name')
         timestamp = msg_dict.get('timestamp')
 
-        if context_name == 'RobotControlAgentOperatingStatus':
+        if context_name == 'RobotAlive':
+            print('hi')
             self.last_alive = msg_dict.get('timestamp')
         elif context_name == 'RobotDetectedImage':
             if self.connect:
@@ -152,26 +184,50 @@ class RecognitionAgent(LaprasAgent):
                 imgdata = base64.b64decode(img_str)
                 cv_img = cv2.imdecode(np.array(np.frombuffer(imgdata, dtype=np.uint8)) , cv2.IMREAD_COLOR)
                 
-                num_humans, labels, bboxes = self.har_model.inference(cv_img)
+                img_copy = cv_img.copy()
                 
-                self.publish_context('humanDetected', value=len(bboxes), qos=1)
-                if len(labels) > 0:
-                    self.user_in_camera = True
-                    self.last_user_detected = time.time()
-                    self.bbox_loc = (2*bboxes[0][0] + bboxes[0][2])/2, (2*bboxes[0][1] + bboxes[0][3])/2
-                    self.bbox_size = bboxes[0][2], bboxes[0][3]
-                    # cv_img_cropeed = cv_img.copy()[bboxes[0][1]-30:bboxes[0][1]+bboxes[0][3]+30, bboxes[0][0]-30:bboxes[0][0]+bboxes[0][2]+30]
-                    # detections = self.clothing_model.detect_clothes_class(cv_img_cropeed)
-                    detections = self.clothing_model.detect_clothes_class(cv_img.copy())
-                    print(detections)
-                    processed_activity = self.activity_process(int(labels[0]))
-                    processed_clothing = self.clothing_process(detections) if len(detections) > 0 else -1
+                detect_results = self.detect_model.detect(img_copy)
+                self.publish_context('humanDetected', value=len(detect_results), qos=1)
+                if len(detect_results) > 0:
                     
-                    self.publish_context('detectedActivity', value=processed_activity, qos=1)
-                    self.publish_context('detectedClothing', value=processed_clothing, qos=1)
-                    print(f'Activity: {processed_activity} | Clothing: {processed_clothing}')
+                    num_humans, labels, bboxes = self.har_model.inference(img_copy)
+                    if len(labels) > 0:
+                        
+                        curr = int(time.time())
+                        cv2.imwrite(os.path.join(self.video_path, f'{curr}.png'), cv_img)
+                        cv2.imwrite(os.path.join(self.video_path, f'{curr}_crop.png'), detect_results[0])
+                        print('user detected', len(detect_results))
+                        self.user_in_camera = True
+                        self.last_user_detected = time.time()
+                        processed_activity = self.activity_process(int(labels[0]))
+                        
+                        self.publish_context('detectedActivity', value=processed_activity, qos=1)
 
+                        self.bbox_loc = (2*bboxes[0][0] + bboxes[0][2])/2, (2*bboxes[0][1] + bboxes[0][3])/2
+                        self.bbox_size = bboxes[0][2], bboxes[0][3]
+
+                        img_copy = cv_img.copy()
+                        img_cropped = detect_results[0].copy()
+                        try:
+                            if processed_activity == SIT:
+                                filtered_img = image_enhancement.IE(img_copy, 'HSV').FLH(10)
+                            else:    
+                                filtered_img = cv2.filter2D(img_copy, -1, self.kernel_sharpening)
+                            
+                            detections = self.clothing_model.detect_clothes_class(filtered_img)
+                        except:
+                            detections = []
+                            # print(processed_clothing, detections)
+                        processed_clothing = self.clothing_process(detections) if len(detections) > 0 else -1
+                        print(ACTIVITY[processed_activity], CLOTHES[processed_clothing], detections)
+                        self.publish_context('detectedClothing', value=processed_clothing, qos=1)
+                            
+                        self.last_activity = processed_activity
+                        self.last_clothing = processed_clothing
+                
                 self.last_ts = timestamp
+                # print(f'Memory in vision - {check_memory_usage():.3f} GB')
+                
 
         elif context_name == 'RobotX':
             self.robot_loc[0] = msg_dict.get('value')
@@ -215,28 +271,38 @@ class RecognitionAgent(LaprasAgent):
 
         difference = user_360 - robot_360
         result_angle = difference if difference <= 180 else difference - 360
+        result_angle = result_angle if result_angle > -180 else result_angle + 360
 
-        return result_angle
+        return int(result_angle)
 
-    def estimate_distance(self, angle, bbox_size):
-        x_ratio = bbox_size[0]/self.img_size[0]
+    def estimate_loc(self, robot_loc, angle, bbox_size):
         y_ratio = bbox_size[1]/self.img_size[1]
 
-        mean_ratio = (x_ratio+y_ratio)/2
+        distance = 0
+        if y_ratio > 0.89:
+            distance = 1
+        elif y_ratio > 0.54:
+            distance = (0.54/0.89)*y_ratio + 0.54*(1-0.54/0.89)
+        elif y_ratio > 0.41:
+            distance = (0.41/0.54)*y_ratio + 0.41*(1-0.41/0.54)
+        else:
+            distance = 3
+        
+        x_delta = math.cos(math.pi * (angle/180))*distance
+        y_delta = math.sin(math.pi * (angle/180))*distance
 
-        mean_distance = self.ratio_coefficient/mean_ratio
-        x_distance = self.ratio_coefficient/x_ratio
-        y_distance = self.ratio_coefficient/y_ratio
+        user_loc = robot_loc[0]+x_delta, robot_loc[1]+y_delta
 
-        print(x_ratio, y_ratio, mean_ratio, x_distance, y_distance, mean_distance)
+
+        return distance, user_loc
 
 
             
     def check_connected(self):
-        now = int(time.time()*1000)
-        connected = now - self.last_alive < 1000*15 
+        # now = int(time.time()*1000)
+        # connected = now - self.last_alive < 1000*15 
+        connected = True if self.robot_state != 'UNITITIALIZED' else False
         return connected
-
 
     def activity_process(self, label):
         sits = [0]
@@ -247,13 +313,16 @@ class RecognitionAgent(LaprasAgent):
         elif label in stands:
             return 1
         elif label in lie:
-            return 2
+            return 0
         else:
             return -1
 
     def clothing_process(self, detections):
         long_clothes = [LONG_SLEEVE_TOP, LONG_SLEEVE_OUTWEAR, LONG_SLEEVE_DRESS] # Long sleeve top, Long sleeve outwear, Long sleeve dress
-        short_clothes = [SHORT_SLEEVE_TOP, SHORT_SLEEVE_OUTWEAR, VEST, SLING, SHORT_SLEEVE_DRESS, VEST_DRESS, SLING_DRESS]
+        short_clothes = [SHORT_SLEEVE_TOP, SHORT_SLEEVE_OUTWEAR, VEST, SLING, SLING_DRESS, SHORT_SLEEVE_DRESS, VEST_DRESS]
+        # long_clothes = [LONG_SLEEVE_OUTWEAR, LONG_SLEEVE_DRESS] # Long sleeve top, Long sleeve outwear, Long sleeve dress
+        # short_clothes = [SHORT_SLEEVE_TOP, SHORT_SLEEVE_OUTWEAR, VEST, SLING, SLING_DRESS, SHORT_SLEEVE_DRESS, VEST_DRESS, LONG_SLEEVE_TOP]
+        
         long_prob = 0
         short_prob = 0
         result = 0

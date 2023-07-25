@@ -68,15 +68,7 @@ class DQNAgent(AgentConfig):
             mini_terminal = torch.Tensor(np.array(self.memory['terminal'])[sampled_indexes]).to(device=device)
             
             q_values = torch.sum(self.policy_network.forward(mini_state)*mini_one_hot_action, 1)
-            ys = mini_reward + (1-mini_terminal)*self.gamma*(torch.amax(self.target_policy_network.forward(mini_next_state).detach(), 1).reshape(self.batch_size, 1))
-
-            # print(mini_state.shape)
-            # print(mini_one_hot_action.shape)
-            # print(mini_reward.shape)
-            # print(mini_next_state.shape)
-            # print(mini_terminal.shape)
-            # print((1-mini_terminal).shape)
-            # print(torch.amax(self.target_policy_network.forward(mini_next_state).detach(), 1).shape)
+            ys = mini_reward + mini_terminal*self.gamma*(torch.amax(self.target_policy_network.forward(mini_next_state).detach(), 1).reshape(self.batch_size, 1))
 
             criterion = nn.SmoothL1Loss()
 
